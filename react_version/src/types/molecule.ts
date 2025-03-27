@@ -6,4 +6,5 @@ export interface Molecule {
     coverImage?: string;
     files: FileData[];
     uploadResponses?: any[];
+    indexHtml?: string;
 } 

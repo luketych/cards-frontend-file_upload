@@ -20,6 +20,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import ErrorIcon from '@mui/icons-material/Error';
 import BugReportIcon from '@mui/icons-material/BugReport';
+import FolderIcon from '@mui/icons-material/Folder';
 import { Molecule } from '../types/molecule';
 
 interface MoleculeCardProps {
@@ -34,6 +35,7 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
     onDelete,
 }) => {
     const [showDebugDialog, setShowDebugDialog] = useState(false);
+    const [showIndexDialog, setShowIndexDialog] = useState(false);
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -43,6 +45,11 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
     const handleDebugClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         setShowDebugDialog(true);
+    };
+
+    const handleIndexClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setShowIndexDialog(true);
     };
 
     const getUploadStatusIcon = () => {
@@ -113,6 +120,15 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
                                     <BugReportIcon />
                                 </IconButton>
                             )}
+                            {molecule.indexHtml && (
+                                <IconButton
+                                    size="small"
+                                    onClick={handleIndexClick}
+                                    sx={{ color: 'text.secondary' }}
+                                >
+                                    <FolderIcon />
+                                </IconButton>
+                            )}
                         </Box>
                     </Box>
                     <Typography variant="body2" color="text.secondary">
@@ -171,6 +187,35 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setShowDebugDialog(false)}>Close</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={showIndexDialog}
+                onClose={() => setShowIndexDialog(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>File Index</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ mt: 2 }}>
+                        <Typography variant="h6" gutterBottom>
+                            {molecule.title} - Files
+                        </Typography>
+                        <List>
+                            {molecule.files.map((file, index) => (
+                                <ListItem key={index}>
+                                    <ListItemText
+                                        primary={file.name}
+                                        secondary={`Type: ${file.type} | Size: ${(file.size / 1024).toFixed(2)} KB`}
+                                    />
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setShowIndexDialog(false)}>Close</Button>
                 </DialogActions>
             </Dialog>
         </>

@@ -242,11 +242,74 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                 coverImageData = `data:image/svg+xml;base64,${btoa(svg)}`;
             }
 
+            // Generate index.html
+            const indexHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title} - File Index</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: white;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .file-name {
+            font-weight: 500;
+            color: #2196f3;
+            margin-bottom: 5px;
+        }
+        .file-info {
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>${title}</h1>
+    <ul>
+        ${processedFiles.map(file => `
+        <li>
+            <div class="file-name">${file.name}</div>
+            <div class="file-info">
+                Type: ${file.type}<br>
+                Size: ${(file.size / 1024).toFixed(2)} KB<br>
+                Last Modified: ${new Date(file.lastModified).toLocaleString()}
+            </div>
+        </li>
+        `).join('')}
+    </ul>
+</body>
+</html>`;
+
             await onSave({
                 title,
                 coverImage: coverImageData,
                 files: processedFiles,
                 uploadResponses,
+                indexHtml,
             });
 
             onClose();

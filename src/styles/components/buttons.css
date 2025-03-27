@@ -1,0 +1,88 @@
+/* Primary Buttons */
+.create-button, .save-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.create-button:hover, .save-button:hover {
+    background-color: #45a049;
+}
+
+.save-button {
+    width: 100%;
+    margin-top: 20px;
+}
+
+/* Action Buttons */
+.add-files-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.add-files-button:hover {
+    background-color: #45a049;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 8px;
+}
+
+.delete-molecule {
+    background-color: var(--error-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.delete-molecule:hover {
+    background-color: #ff0000;
+}
+
+/* Remove File Button */
+.remove-file {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--error-color);
+    box-shadow: 0 1px 3px var(--shadow-color);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.file-item:hover .remove-file {
+    opacity: 1;
+}
+
+.remove-file:hover {
+    background: var(--error-color);
+    color: white;
+}

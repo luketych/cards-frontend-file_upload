@@ -1,0 +1,90 @@
+/* Form Layout */
+.molecule-form {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+/* Cover Image Area */
+.cover-image-area {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+}
+
+.cover-upload-label {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.cover-preview {
+    max-width: 300px;
+    margin: 10px auto;
+    position: relative;
+}
+
+.cover-preview img {
+    max-width: 100%;
+    border-radius: 4px;
+}
+
+/* Upload Area */
+.upload-area {
+    padding: 40px;
+    border: 2px dashed var(--border-color);
+    margin-bottom: 20px;
+    border-radius: 8px;
+    text-align: center;
+    position: relative;
+}
+
+.upload-area.drag-over {
+    background-color: rgba(76, 175, 80, 0.1);
+    border-color: var(--primary-color);
+}
+
+/* Input Controls */
+#coverImageInput {
+    display: none;
+}
+
+#fileInput {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    cursor: pointer;
+    pointer-events: none;
+}
+
+.upload-area:hover #fileInput {
+    pointer-events: auto;
+}
+
+.upload-label {
+    font-size: 1.1rem;
+    color: #666;
+}

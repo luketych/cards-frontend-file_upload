@@ -82,7 +82,7 @@ function App() {
     const handleUploadAll = async () => {
         setIsUploading(true);
         try {
-            const moleculesWithPendingUploads = molecules.filter(molecule => {
+                const moleculesWithPendingUploads = molecules.filter(molecule => {
                 const hasFiles = molecule.files.length > 0;
                 const hasNoUploads = !molecule.uploadResponses?.length;
                 const hasErrors = molecule.uploadResponses?.some(response => response.error);
@@ -115,26 +115,22 @@ function App() {
                             lastModified: file.lastModified
                         });
 
-                        // Convert thumbnail/dataURL to blob if available
+                        // if filetype is image
                         if (file.thumbnail) {
                             try {
                                 // Convert base64 to blob
                                 const response = await fetch(file.thumbnail);
-                                const blob = await response.blob();
-                                formData.append('files', blob, file.name);
-                                console.log('Successfully converted thumbnail to blob:', blob.size);
+                                const imageBlob = await response.blob();
+                                formData.append('files', imageBlob, file.name);
                             } catch (error) {
                                 console.error('Error converting thumbnail to blob:', error);
                                 throw new Error('Failed to process file thumbnail');
                             }
-                        } else {
-                            console.error('No thumbnail/dataURL available for file:', file.name);
-                            responses.push({ 
-                                error: 'No file data available',
-                                status: 'error',
-                                file: file.name
-                            });
-                            continue;
+                        } else { // if filetype is not image
+                            const resp = await fetch(file.name)
+                            const fileBlob = await resp.blob()
+                            
+                            formData.append('files', fileBlob, file.name);
                         }
                         
                         // Verify formData content

@@ -15,6 +15,8 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { FileData } from '../types/file';
 import { Molecule } from '../types/molecule';
 import { getFilePreview } from '../utils/file-helpers';
@@ -36,14 +38,12 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
     onDelete,
 }) => {
     const [title, setTitle] = useState('');
-    const [coverImage, setCoverImage] = useState<File | null>(null);
-    const [coverPreview, setCoverPreview] = useState('');
     const [files, setFiles] = useState<File[]>([]);
+    const [selectedCoverImageIndex, setSelectedCoverImageIndex] = useState<number>(-1);
     const [isSaving, setIsSaving] = useState(false);
     const [processingFiles, setProcessingFiles] = useState(0);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const coverInputRef = useRef<HTMLInputElement>(null);
     const [previews, setPreviews] = useState<string[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadResponses, setUploadResponses] = useState<any[]>([]);
@@ -53,43 +53,53 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
     // Reset state when modal is opened/closed or molecule changes
     useEffect(() => {
         if (open) {
-            // Set initial state based on molecule prop
             setTitle(molecule?.title || '');
-            setCoverPreview(molecule?.coverImage || '');
             
-            // Convert existing FileData objects to File objects for display
             if (molecule?.files) {
                 const existingFiles = molecule.files.map(fileData => {
-                    // Create a File object from the FileData
-                    const file = new File(
-                        [], // Empty blob since we don't have the actual file content
-                        fileData.name,
-                        { type: fileData.type }
-                    );
-                    // Add the original properties
+                    const file = new File([], fileData.name, { type: fileData.type });
                     Object.defineProperty(file, 'size', { value: fileData.size });
                     Object.defineProperty(file, 'lastModified', { value: fileData.lastModified });
-                    // Add the thumbnail data
                     if (fileData.thumbnail) {
                         Object.defineProperty(file, 'dataURL', { value: fileData.thumbnail });
                     }
                     return file;
                 });
                 setFiles(existingFiles);
+                
+                // Find the index of the file that matches the cover image
+                const coverIndex = existingFiles.findIndex(file => {
+                    const fileData = molecule.files.find(f => f.name === file.name);
+                    return fileData?.thumbnail === molecule.coverImage;
+                });
+                setSelectedCoverImageIndex(coverIndex);
+
+                // Log complete molecule data
+                console.log('Loaded Molecule Data:', {
+                    id: molecule.id,
+                    title: molecule.title,
+                    coverImage: molecule.coverImage,
+                    files: molecule.files.map(file => ({
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        lastModified: file.lastModified,
+                        thumbnail: file.thumbnail ? 'data:image/...' : undefined
+                    })),
+                    uploadResponses: molecule.uploadResponses
+                });
             } else {
                 setFiles([]);
+                setSelectedCoverImageIndex(-1);
             }
             
-            setCoverImage(null);
             setProcessingFiles(0);
             setShowConfirmDialog(false);
             setUploadResponses(molecule?.uploadResponses || []);
         } else {
-            // Reset all state when modal is closed
             setTitle('');
-            setCoverImage(null);
-            setCoverPreview('');
             setFiles([]);
+            setSelectedCoverImageIndex(-1);
             setProcessingFiles(0);
             setShowConfirmDialog(false);
             setIsSaving(false);
@@ -112,86 +122,57 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
         setHasUnuploadedFiles(!hasUploaded);
     }, [files, uploadResponses]);
 
-    const handleCoverImageChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file && file.type.startsWith('image/')) {
-            setCoverImage(file);
-            try {
-                setProcessingFiles(prev => prev + 1);
-                const preview = await getFilePreview(file);
-                setCoverPreview(preview || '');
-            } finally {
-                setProcessingFiles(prev => prev - 1);
+    const handleClose = useCallback(() => {
+        if (hasUnuploadedFiles) {
+            setShowExitWarning(true);
+        } else if (processingFiles > 0 || isSaving) {
+            setShowConfirmDialog(true);
+        } else {
+            onClose();
+        }
+    }, [processingFiles, isSaving, onClose, hasUnuploadedFiles]);
+
+    const handleConfirmClose = useCallback(() => {
+        setShowConfirmDialog(false);
+        onClose();
+    }, [onClose]);
+
+    const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFiles = Array.from(event.target.files || []);
+        setProcessingFiles(prev => prev + selectedFiles.length);
+
+        try {
+            const processedFiles = await Promise.all(
+                selectedFiles.map(async (file) => {
+                    if (file.type.startsWith('image/')) {
+                        const thumbnail = await getFilePreview(file);
+                        if (thumbnail) {
+                            Object.defineProperty(file, 'dataURL', { value: thumbnail });
+                        }
+                    }
+                    return file;
+                })
+            );
+
+            setFiles(prev => [...prev, ...processedFiles]);
+            
+            // If this is the first image file and no cover is selected, automatically select it
+            if (selectedCoverImageIndex === -1) {
+                const firstImageIndex = files.length + processedFiles.findIndex(file => file.type.startsWith('image/'));
+                if (firstImageIndex >= 0) {
+                    setSelectedCoverImageIndex(firstImageIndex);
+                }
             }
-        }
-    }, []);
-
-    const handleFilesChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newFiles = Array.from(event.target.files || []);
-        setProcessingFiles(prev => prev + newFiles.length);
-        
-        try {
-            const processedFiles = await Promise.all(
-                newFiles.map(async file => {
-                    if (file.type.startsWith('image/')) {
-                        const thumbnail = await getFilePreview(file);
-                        if (thumbnail) {
-                            Object.defineProperty(file, 'dataURL', { value: thumbnail });
-                        }
-                    }
-                    return file;
-                })
-            );
-            
-            setFiles(prev => [...prev, ...processedFiles]);
+        } catch (error) {
+            console.error('Error processing files:', error);
         } finally {
-            setProcessingFiles(prev => prev - newFiles.length);
+            setProcessingFiles(prev => prev - selectedFiles.length);
         }
-    }, []);
-
-    const handleDrop = useCallback(async (event: React.DragEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const droppedFiles = Array.from(event.dataTransfer.files);
-        setProcessingFiles(prev => prev + droppedFiles.length);
-        
-        try {
-            const processedFiles = await Promise.all(
-                droppedFiles.map(async file => {
-                    if (file.type.startsWith('image/')) {
-                        const thumbnail = await getFilePreview(file);
-                        if (thumbnail) {
-                            Object.defineProperty(file, 'dataURL', { value: thumbnail });
-                        }
-                    }
-                    return file;
-                })
-            );
-            
-            setFiles(prev => [...prev, ...processedFiles]);
-        } finally {
-            setProcessingFiles(prev => prev - droppedFiles.length);
-        }
-    }, []);
-
-    const handleDragOver = useCallback((event: React.DragEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
-    }, []);
-
-    const handleRemoveFile = useCallback((index: number) => {
-        setFiles(prev => prev.filter((_, i) => i !== index));
-        setPreviews(prev => prev.filter((_, i) => i !== index));
-    }, []);
+    }, [files.length, selectedCoverImageIndex]);
 
     const handleSave = useCallback(async () => {
         if (!title.trim()) {
             alert('Please enter a title for your molecule');
-            return;
-        }
-
-        if (!coverImage && !coverPreview) {
-            alert('Please select a cover image');
             return;
         }
 
@@ -207,12 +188,10 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
 
         try {
             setIsSaving(true);
-            const coverImageData = coverPreview || (await getFilePreview(coverImage!)) || '';
             
             // Process files, preserving existing file data for files that haven't changed
             const processedFiles = await Promise.all(
-                files.map(async file => {
-                    // If this is an existing file (has a dataURL property), use its data
+                files.map(async (file, index) => {
                     if ('dataURL' in file) {
                         return {
                             name: file.name,
@@ -223,7 +202,6 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                         };
                     }
                     
-                    // Otherwise, process the new file
                     const fileData: FileData = {
                         name: file.name,
                         type: file.type,
@@ -239,10 +217,36 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                 })
             );
 
+            // Get the cover image - either from selected image file or use default icon
+            let coverImageData = '';
+            if (selectedCoverImageIndex !== -1) {
+                const selectedFile = processedFiles[selectedCoverImageIndex];
+                if (selectedFile.thumbnail) {
+                    coverImageData = selectedFile.thumbnail;
+                } else {
+                    // Create a data URL for a simple file icon
+                    const svg = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24">
+                            <path fill="#9e9e9e" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+                        </svg>
+                    `;
+                    coverImageData = `data:image/svg+xml;base64,${btoa(svg)}`;
+                }
+            } else {
+                // Create a data URL for a simple file icon
+                const svg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24">
+                        <path fill="#9e9e9e" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+                    </svg>
+                `;
+                coverImageData = `data:image/svg+xml;base64,${btoa(svg)}`;
+            }
+
             await onSave({
-                title: title.trim(),
+                title,
                 coverImage: coverImageData,
                 files: processedFiles,
+                uploadResponses,
             });
 
             onClose();
@@ -252,22 +256,7 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
         } finally {
             setIsSaving(false);
         }
-    }, [title, coverImage, coverPreview, files, processingFiles, onSave, onClose]);
-
-    const handleClose = useCallback(() => {
-        if (hasUnuploadedFiles) {
-            setShowExitWarning(true);
-        } else if (processingFiles > 0 || isSaving) {
-            setShowConfirmDialog(true);
-        } else {
-            onClose();
-        }
-    }, [processingFiles, isSaving, onClose, hasUnuploadedFiles]);
-
-    const handleConfirmClose = useCallback(() => {
-        setShowConfirmDialog(false);
-        onClose();
-    }, [onClose]);
+    }, [title, files, selectedCoverImageIndex, processingFiles, onSave, onClose, uploadResponses]);
 
     const handleUpload = async () => {
         setIsUploading(true);
@@ -377,10 +366,15 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
         // Log final state
         console.log('Final upload responses:', responses);
 
+        // Get the cover image from the selected file's thumbnail
+        const selectedFile = files[selectedCoverImageIndex];
+        const selectedFileData = selectedFile as { dataURL?: string } & File;
+        const coverImageData = selectedFileData.dataURL || '';
+
         // Save the molecule with upload responses
         const updatedMolecule: Omit<Molecule, 'id'> = {
             title,
-            coverImage: coverPreview || '',
+            coverImage: coverImageData,
             files: files.map(file => ({
                 name: file.name,
                 type: file.type,
@@ -400,6 +394,17 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
         await handleUpload();
     };
 
+    const handleRemoveFile = useCallback((index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
+        if (index === selectedCoverImageIndex) {
+            // Find the next available image file
+            const nextImageIndex = files.findIndex((file, i) => i !== index && file.type.startsWith('image/'));
+            setSelectedCoverImageIndex(nextImageIndex);
+        } else if (index < selectedCoverImageIndex) {
+            setSelectedCoverImageIndex(prev => prev - 1);
+        }
+    }, [files, selectedCoverImageIndex]);
+
     return (
         <>
             <Dialog
@@ -411,7 +416,6 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                     sx: {
                         minHeight: '80vh',
                         maxHeight: '90vh',
-                        position: 'relative',
                     },
                 }}
             >
@@ -420,140 +424,103 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                         <Typography variant="h6">
                             {molecule ? 'Edit Molecule' : 'New Molecule'}
                         </Typography>
-                        <Box display="flex" alignItems="center" gap={1}>
-                            <Button
-                                startIcon={<CloudUploadIcon />}
-                                variant="contained"
-                                color="primary"
-                                onClick={handleUploadAll}
-                                disabled={isUploading || files.length === 0}
-                            >
-                                {isUploading ? <CircularProgress size={24} /> : 'Upload All'}
-                            </Button>
-                            <IconButton
-                                edge="end"
-                                color="inherit"
-                                onClick={handleClose}
-                                aria-label="close"
-                            >
-                                <CloseIcon />
-                            </IconButton>
-                        </Box>
+                        <IconButton edge="end" color="inherit" onClick={handleClose}>
+                            <CloseIcon />
+                        </IconButton>
                     </Box>
                 </DialogTitle>
                 <DialogContent>
-                    {hasUnuploadedFiles && (
-                        <Alert severity="warning" sx={{ mb: 2 }}>
-                            You have files that haven't been uploaded yet. Please upload them before saving.
-                        </Alert>
-                    )}
                     <Box sx={{ mt: 2 }}>
                         <TextField
                             fullWidth
-                            label="Molecule Title"
+                            label="Title"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            required
-                            sx={{ mb: 2 }}
+                            margin="normal"
                         />
 
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle1" gutterBottom>
-                                Cover Image
+                        <Box
+                            sx={{
+                                mt: 2,
+                                border: '2px dashed #ccc',
+                                borderRadius: 1,
+                                p: 2,
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    borderColor: 'primary.main',
+                                },
+                            }}
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            <CloudUploadIcon sx={{ fontSize: 48, color: 'action.active', mb: 1 }} />
+                            <Typography>
+                                Click or drag files here to upload
                             </Typography>
-                            <Box
-                                sx={{
-                                    border: '2px dashed #ccc',
-                                    borderRadius: 1,
-                                    p: 2,
-                                    textAlign: 'center',
-                                    cursor: 'pointer',
-                                    '&:hover': {
-                                        borderColor: 'primary.main',
-                                    },
-                                }}
-                                onClick={() => coverInputRef.current?.click()}
-                            >
-                                {coverPreview ? (
+                            <Typography variant="caption" color="text.secondary">
+                                Images can be selected as cover image
+                            </Typography>
+                        </Box>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileSelect}
+                            multiple
+                            style={{ display: 'none' }}
+                        />
+
+                        <Grid container spacing={2} sx={{ mt: 2 }}>
+                            {files.map((file, index) => (
+                                <Grid item xs={12} sm={6} md={4} key={index}>
                                     <Box
-                                        component="img"
-                                        src={coverPreview}
-                                        alt="Cover Preview"
                                         sx={{
-                                            maxWidth: '100%',
-                                            maxHeight: 200,
-                                            objectFit: 'contain',
+                                            position: 'relative',
+                                            '&:hover .cover-select': {
+                                                opacity: 1,
+                                            },
                                         }}
-                                    />
-                                ) : (
-                                    <Typography>
-                                        Click to select a cover image
-                                    </Typography>
-                                )}
-                            </Box>
-                            <input
-                                type="file"
-                                ref={coverInputRef}
-                                onChange={handleCoverImageChange}
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                            />
-                        </Box>
-
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle1" gutterBottom>
-                                Files
-                            </Typography>
-                            <Box
-                                sx={{
-                                    border: '2px dashed #ccc',
-                                    borderRadius: 1,
-                                    p: 2,
-                                    textAlign: 'center',
-                                    cursor: 'pointer',
-                                    '&:hover': {
-                                        borderColor: 'primary.main',
-                                    },
-                                }}
-                                onClick={() => fileInputRef.current?.click()}
-                                onDrop={handleDrop}
-                                onDragOver={handleDragOver}
-                            >
-                                <Typography>
-                                    Drag and drop files here or click to select
-                                </Typography>
-                            </Box>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFilesChange}
-                                multiple
-                                style={{ display: 'none' }}
-                            />
-                        </Box>
-
-                        {files.length > 0 && (
-                            <Box sx={{ mt: 2 }}>
-                                <Typography variant="subtitle1" gutterBottom>
-                                    Selected Files
-                                </Typography>
-                                <Grid container spacing={2}>
-                                    {files.map((file, index) => (
-                                        <Grid item xs={12} sm={6} md={4} key={index}>
-                                            <FileItem
-                                                file={file}
-                                                onRemove={() => handleRemoveFile(index)}
-                                            />
-                                        </Grid>
-                                    ))}
+                                    >
+                                        <FileItem
+                                            file={file as any}
+                                            onRemove={() => handleRemoveFile(index)}
+                                        />
+                                        {file.type.startsWith('image/') && (
+                                            <IconButton
+                                                className="cover-select"
+                                                size="small"
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: 4,
+                                                    left: 4,
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                                    opacity: index === selectedCoverImageIndex ? 1 : 0,
+                                                    transition: 'opacity 0.2s',
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                                    },
+                                                }}
+                                                onClick={() => setSelectedCoverImageIndex(index)}
+                                            >
+                                                {index === selectedCoverImageIndex ? (
+                                                    <StarIcon color="primary" />
+                                                ) : (
+                                                    <StarBorderIcon />
+                                                )}
+                                            </IconButton>
+                                        )}
+                                    </Box>
                                 </Grid>
-                            </Box>
-                        )}
+                            ))}
+                        </Grid>
                     </Box>
                 </DialogContent>
                 <DialogActions>
                     {onDelete && molecule && (
-                        <Button onClick={() => onDelete(molecule.id)} color="error">
+                        <Button
+                            color="error"
+                            onClick={() => onDelete(molecule.id)}
+                            sx={{ mr: 'auto' }}
+                        >
                             Delete
                         </Button>
                     )}
@@ -561,9 +528,10 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                     <Button
                         onClick={handleSave}
                         variant="contained"
+                        color="primary"
                         disabled={isSaving || processingFiles > 0}
                     >
-                        {isSaving ? 'Saving...' : 'Save'}
+                        {isSaving ? <CircularProgress size={24} /> : 'Save'}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -4,20 +4,29 @@
         {
             "type": "chrome",
             "request": "launch",
-            "name": "Open Old Version",
-            "file": "${workspaceFolder}/old_src/index.html",
-            "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
-            "runtimeArgs": ["--allow-file-access", "--disable-web-security"]
+            "name": "Launch Chrome against localhost",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/react_version",
+            "sourceMapPathOverrides": {
+                "webpack:///src/*": "${webRoot}/src/*"
+            },
+            "runtimeArgs": [
+                "--disable-extensions",
+                "--disable-gpu",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--user-data-dir=${workspaceFolder}/.vscode/chrome-debug-profile"
+            ],
+            "preLaunchTask": "npm: dev"
         },
         {
             "type": "node",
             "request": "launch",
-            "name": "Debug Vite",
+            "name": "Launch Vite Server",
             "runtimeExecutable": "npm",
             "runtimeArgs": ["run", "dev"],
-            "skipFiles": ["<node_internals>/**"],
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/react_version"
+            "cwd": "${workspaceFolder}/react_version",
+            "console": "integratedTerminal"
         }
     ]
 }

@@ -11,8 +11,10 @@ import {
     Typography,
     IconButton,
     CircularProgress,
+    Alert,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { FileData } from '../types/file';
 import { Molecule } from '../types/molecule';
 import { getFilePreview } from '../utils/file-helpers';
@@ -45,6 +47,8 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
     const [previews, setPreviews] = useState<string[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadResponses, setUploadResponses] = useState<any[]>([]);
+    const [hasUnuploadedFiles, setHasUnuploadedFiles] = useState(false);
+    const [showExitWarning, setShowExitWarning] = useState(false);
 
     // Reset state when modal is opened/closed or molecule changes
     useEffect(() => {
@@ -102,6 +106,11 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
         };
         loadPreviews();
     }, [files]);
+
+    useEffect(() => {
+        const hasUploaded = files.length > 0 && uploadResponses.length === files.length;
+        setHasUnuploadedFiles(!hasUploaded);
+    }, [files, uploadResponses]);
 
     const handleCoverImageChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -246,12 +255,14 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
     }, [title, coverImage, coverPreview, files, processingFiles, onSave, onClose]);
 
     const handleClose = useCallback(() => {
-        if (processingFiles > 0 || isSaving) {
+        if (hasUnuploadedFiles) {
+            setShowExitWarning(true);
+        } else if (processingFiles > 0 || isSaving) {
             setShowConfirmDialog(true);
         } else {
             onClose();
         }
-    }, [processingFiles, isSaving, onClose]);
+    }, [processingFiles, isSaving, onClose, hasUnuploadedFiles]);
 
     const handleConfirmClose = useCallback(() => {
         setShowConfirmDialog(false);
@@ -382,6 +393,13 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
         await onSave(updatedMolecule);
     };
 
+    const handleUploadAll = async () => {
+        if (!files.length) {
+            return;
+        }
+        await handleUpload();
+    };
+
     return (
         <>
             <Dialog
@@ -402,17 +420,33 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                         <Typography variant="h6">
                             {molecule ? 'Edit Molecule' : 'New Molecule'}
                         </Typography>
-                        <IconButton
-                            edge="end"
-                            color="inherit"
-                            onClick={handleClose}
-                            aria-label="close"
-                        >
-                            <CloseIcon />
-                        </IconButton>
+                        <Box display="flex" alignItems="center" gap={1}>
+                            <Button
+                                startIcon={<CloudUploadIcon />}
+                                variant="contained"
+                                color="primary"
+                                onClick={handleUploadAll}
+                                disabled={isUploading || files.length === 0}
+                            >
+                                {isUploading ? <CircularProgress size={24} /> : 'Upload All'}
+                            </Button>
+                            <IconButton
+                                edge="end"
+                                color="inherit"
+                                onClick={handleClose}
+                                aria-label="close"
+                            >
+                                <CloseIcon />
+                            </IconButton>
+                        </Box>
                     </Box>
                 </DialogTitle>
                 <DialogContent>
+                    {hasUnuploadedFiles && (
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                            You have files that haven't been uploaded yet. Please upload them before saving.
+                        </Alert>
+                    )}
                     <Box sx={{ mt: 2 }}>
                         <TextField
                             fullWidth
@@ -525,14 +559,6 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                     )}
                     <Button onClick={handleClose}>Cancel</Button>
                     <Button
-                        onClick={handleUpload}
-                        variant="contained"
-                        color="primary"
-                        disabled={isUploading || files.length === 0}
-                    >
-                        {isUploading ? <CircularProgress size={24} /> : 'Upload'}
-                    </Button>
-                    <Button
                         onClick={handleSave}
                         variant="contained"
                         disabled={isSaving || processingFiles > 0}
@@ -558,6 +584,35 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                     </Button>
                     <Button onClick={handleConfirmClose} color="error">
                         Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={showExitWarning}
+                onClose={() => setShowExitWarning(false)}
+            >
+                <DialogTitle>Unuploaded Files</DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        You have files that haven't been uploaded yet. Are you sure you want to exit without uploading them?
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setShowExitWarning(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleUploadAll} color="primary" variant="contained">
+                        Upload All
+                    </Button>
+                    <Button 
+                        onClick={() => {
+                            setShowExitWarning(false);
+                            onClose();
+                        }} 
+                        color="error"
+                    >
+                        Exit Without Uploading
                     </Button>
                 </DialogActions>
             </Dialog>

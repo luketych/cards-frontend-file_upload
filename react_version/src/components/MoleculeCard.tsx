@@ -104,7 +104,7 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             {getUploadStatusIcon()}
-                            {molecule.uploadResponses?.length > 0 && (
+                            {(molecule.uploadResponses?.length ?? 0) > 0 && (
                                 <IconButton
                                     size="small"
                                     onClick={handleDebugClick}

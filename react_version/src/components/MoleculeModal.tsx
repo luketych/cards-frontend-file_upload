@@ -8,9 +8,13 @@ import {
     TextField,
     Box,
     Grid,
+    Typography,
+    IconButton,
+    CircularProgress,
 } from '@mui/material';
-import Typography from '@mui/material/Typography';
-import { FileData, Molecule } from '../types';
+import CloseIcon from '@mui/icons-material/Close';
+import { FileData } from '../types/file';
+import { Molecule } from '../types/molecule';
 import { getFilePreview } from '../utils/file-helpers';
 import { FileItem } from './FileItem';
 
@@ -19,6 +23,7 @@ interface MoleculeModalProps {
     onClose: () => void;
     onSave: (molecule: Omit<Molecule, 'id'>) => Promise<void>;
     molecule?: Molecule;
+    onDelete?: (id: number) => void;
 }
 
 export const MoleculeModal: React.FC<MoleculeModalProps> = ({
@@ -26,6 +31,7 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
     onClose,
     onSave,
     molecule,
+    onDelete,
 }) => {
     const [title, setTitle] = useState('');
     const [coverImage, setCoverImage] = useState<File | null>(null);
@@ -36,6 +42,9 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
+    const [previews, setPreviews] = useState<string[]>([]);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadResponses, setUploadResponses] = useState<any[]>([]);
 
     // Reset state when modal is opened/closed or molecule changes
     useEffect(() => {
@@ -70,6 +79,7 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
             setCoverImage(null);
             setProcessingFiles(0);
             setShowConfirmDialog(false);
+            setUploadResponses(molecule?.uploadResponses || []);
         } else {
             // Reset all state when modal is closed
             setTitle('');
@@ -79,8 +89,19 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
             setProcessingFiles(0);
             setShowConfirmDialog(false);
             setIsSaving(false);
+            setUploadResponses([]);
         }
     }, [open, molecule]);
+
+    useEffect(() => {
+        const loadPreviews = async () => {
+            const newPreviews = await Promise.all(
+                files.map(file => getFilePreview(file))
+            );
+            setPreviews(newPreviews.filter((preview): preview is string => preview !== null));
+        };
+        loadPreviews();
+    }, [files]);
 
     const handleCoverImageChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -151,6 +172,7 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
 
     const handleRemoveFile = useCallback((index: number) => {
         setFiles(prev => prev.filter((_, i) => i !== index));
+        setPreviews(prev => prev.filter((_, i) => i !== index));
     }, []);
 
     const handleSave = useCallback(async () => {
@@ -236,6 +258,130 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
         onClose();
     }, [onClose]);
 
+    const handleUpload = async () => {
+        setIsUploading(true);
+        const responses = [];
+
+        for (const file of files) {
+            const formData = new FormData();
+            
+            try {
+                // Check if file is empty
+                if (file.size === 0) {
+                    console.error('File is empty:', file.name);
+                    responses.push({ 
+                        error: 'File is empty',
+                        status: 'error',
+                        file: file.name
+                    });
+                    continue;
+                }
+
+                // Log file details before upload
+                console.log('Uploading file:', {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    lastModified: file.lastModified
+                });
+
+                // If this is a file that was previously loaded (has dataURL)
+                const fileWithDataUrl = file as { dataURL?: string } & File;
+                if (fileWithDataUrl.dataURL) {
+                    // Convert base64 back to blob
+                    const response = await fetch(fileWithDataUrl.dataURL);
+                    const blob = await response.blob();
+                    formData.append('files', blob, file.name);
+                } else {
+                    formData.append('files', file, file.name);
+                }
+                
+                // Verify formData content
+                console.log('FormData entries:');
+                for (const pair of formData.entries()) {
+                    console.log(pair[0], pair[1]);
+                    const value = pair[1];
+                    if (value instanceof Blob) {
+                        console.log('File/Blob size in FormData:', value.size);
+                    }
+                }
+
+                const response = await fetch('http://localhost:1337/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`
+                    },
+                });
+
+                // Log the full response details
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Upload error details:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        headers: Object.fromEntries(response.headers.entries()),
+                        errorText
+                    });
+
+                    let errorMessage;
+                    try {
+                        // Try to parse error as JSON
+                        const errorJson = JSON.parse(errorText);
+                        errorMessage = errorJson.error?.message || errorJson.message || errorText;
+                    } catch {
+                        // If not JSON, use text directly
+                        errorMessage = errorText;
+                    }
+
+                    throw new Error(`Upload failed (${response.status}): ${errorMessage}`);
+                }
+
+                const data = await response.json();
+                console.log('Upload success response:', data);
+                responses.push(data);
+            } catch (error) {
+                console.error('Upload error:', {
+                    file: file.name,
+                    error: error instanceof Error ? {
+                        message: error.message,
+                        stack: error.stack
+                    } : error
+                });
+
+                responses.push({ 
+                    error: error instanceof Error ? error.message : 'Upload failed',
+                    status: 'error',
+                    file: file.name
+                });
+            }
+        }
+
+        setUploadResponses(responses);
+        setIsUploading(false);
+
+        // Log final state
+        console.log('Final upload responses:', responses);
+
+        // Save the molecule with upload responses
+        const updatedMolecule: Omit<Molecule, 'id'> = {
+            title,
+            coverImage: coverPreview || '',
+            files: files.map(file => ({
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                lastModified: file.lastModified,
+                thumbnail: (file as any).dataURL
+            })),
+            uploadResponses: responses,
+        };
+        await onSave(updatedMolecule);
+    };
+
     return (
         <>
             <Dialog
@@ -243,19 +389,28 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                 onClose={handleClose}
                 maxWidth="md"
                 fullWidth
+                PaperProps={{
+                    sx: {
+                        minHeight: '80vh',
+                        maxHeight: '90vh',
+                        position: 'relative',
+                    },
+                }}
             >
                 <DialogTitle>
-                    {molecule ? 'Edit Molecule' : 'Create Molecule'}
-                    <Button
-                        onClick={handleClose}
-                        sx={{
-                            position: 'absolute',
-                            right: 8,
-                            top: 8,
-                        }}
-                    >
-                        ×
-                    </Button>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Typography variant="h6">
+                            {molecule ? 'Edit Molecule' : 'New Molecule'}
+                        </Typography>
+                        <IconButton
+                            edge="end"
+                            color="inherit"
+                            onClick={handleClose}
+                            aria-label="close"
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
                 </DialogTitle>
                 <DialogContent>
                     <Box sx={{ mt: 2 }}>
@@ -363,7 +518,20 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                     </Box>
                 </DialogContent>
                 <DialogActions>
+                    {onDelete && molecule && (
+                        <Button onClick={() => onDelete(molecule.id)} color="error">
+                            Delete
+                        </Button>
+                    )}
                     <Button onClick={handleClose}>Cancel</Button>
+                    <Button
+                        onClick={handleUpload}
+                        variant="contained"
+                        color="primary"
+                        disabled={isUploading || files.length === 0}
+                    >
+                        {isUploading ? <CircularProgress size={24} /> : 'Upload'}
+                    </Button>
                     <Button
                         onClick={handleSave}
                         variant="contained"

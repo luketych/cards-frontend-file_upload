@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Debug React App",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/react_version",
+            "sourceMaps": true,
+            "sourceMapPathOverrides": {
+                "/@fs/*": "${webRoot}/*",
+                "/@vite/*": "${webRoot}/node_modules/*"
+            },
+            "preLaunchTask": "npm: dev"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Vite",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev"],
+            "skipFiles": ["<node_internals>/**"],
+            "console": "integratedTerminal"
+        }
+    ]
+} 

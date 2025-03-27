@@ -7,7 +7,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
 import AudioFileIcon from '@mui/icons-material/AudioFile';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
-import { FileData } from '../types';
+import { FileData } from '../types/file';
 import { formatFileSize } from '../utils/file-helpers';
 
 interface FileItemProps {

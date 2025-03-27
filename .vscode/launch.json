@@ -10,13 +10,14 @@
             "runtimeArgs": ["--allow-file-access", "--disable-web-security"]
         },
         {
-            "type": "chrome",
+            "type": "node",
             "request": "launch",
-            "name": "Open React Version",
-            "url": "http://localhost:3000",
-            "webRoot": "${workspaceFolder}/react_version",
-            "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
-            "preLaunchTask": "Start React Dev Server"
+            "name": "Debug Vite",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev"],
+            "skipFiles": ["<node_internals>/**"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/react_version"
         }
     ]
 }

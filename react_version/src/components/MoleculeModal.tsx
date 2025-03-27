@@ -96,16 +96,52 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
         }
     }, []);
 
-    const handleFilesChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFilesChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
         const newFiles = Array.from(event.target.files || []);
-        setFiles(prev => [...prev, ...newFiles]);
+        setProcessingFiles(prev => prev + newFiles.length);
+        
+        try {
+            const processedFiles = await Promise.all(
+                newFiles.map(async file => {
+                    if (file.type.startsWith('image/')) {
+                        const thumbnail = await getFilePreview(file);
+                        if (thumbnail) {
+                            Object.defineProperty(file, 'dataURL', { value: thumbnail });
+                        }
+                    }
+                    return file;
+                })
+            );
+            
+            setFiles(prev => [...prev, ...processedFiles]);
+        } finally {
+            setProcessingFiles(prev => prev - newFiles.length);
+        }
     }, []);
 
-    const handleDrop = useCallback((event: React.DragEvent) => {
+    const handleDrop = useCallback(async (event: React.DragEvent) => {
         event.preventDefault();
         event.stopPropagation();
         const droppedFiles = Array.from(event.dataTransfer.files);
-        setFiles(prev => [...prev, ...droppedFiles]);
+        setProcessingFiles(prev => prev + droppedFiles.length);
+        
+        try {
+            const processedFiles = await Promise.all(
+                droppedFiles.map(async file => {
+                    if (file.type.startsWith('image/')) {
+                        const thumbnail = await getFilePreview(file);
+                        if (thumbnail) {
+                            Object.defineProperty(file, 'dataURL', { value: thumbnail });
+                        }
+                    }
+                    return file;
+                })
+            );
+            
+            setFiles(prev => [...prev, ...processedFiles]);
+        } finally {
+            setProcessingFiles(prev => prev - droppedFiles.length);
+        }
     }, []);
 
     const handleDragOver = useCallback((event: React.DragEvent) => {

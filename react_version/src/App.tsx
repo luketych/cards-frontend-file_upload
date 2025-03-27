@@ -113,6 +113,12 @@ function App() {
                                 setSelectedMolecule(molecule);
                                 setIsViewModalOpen(true);
                             }}
+                            onDelete={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm('Are you sure you want to delete this molecule?')) {
+                                    handleDeleteMolecule(molecule.id);
+                                }
+                            }}
                         />
                     </Grid>
                 ))}

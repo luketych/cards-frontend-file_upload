@@ -1,13 +1,15 @@
 import React from 'react';
-import { Card, CardContent, CardMedia, Typography, Box } from '@mui/material';
+import { Card, CardContent, CardMedia, Typography, Box, IconButton } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { Molecule } from '../types';
 
 interface MoleculeCardProps {
     molecule: Molecule;
     onClick: () => void;
+    onDelete: (e: React.MouseEvent) => void;
 }
 
-export const MoleculeCard: React.FC<MoleculeCardProps> = ({ molecule, onClick }) => {
+export const MoleculeCard: React.FC<MoleculeCardProps> = ({ molecule, onClick, onDelete }) => {
     return (
         <Card 
             sx={{ 
@@ -47,6 +49,20 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({ molecule, onClick })
                     </Box>
                 )}
             </CardContent>
+            <IconButton
+                onClick={onDelete}
+                sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    }
+                }}
+            >
+                <DeleteIcon color="error" />
+            </IconButton>
         </Card>
     );
 }; 

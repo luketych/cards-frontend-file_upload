@@ -43,7 +43,30 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
             // Set initial state based on molecule prop
             setTitle(molecule?.title || '');
             setCoverPreview(molecule?.coverImage || '');
-            setFiles([]);
+            
+            // Convert existing FileData objects to File objects for display
+            if (molecule?.files) {
+                const existingFiles = molecule.files.map(fileData => {
+                    // Create a File object from the FileData
+                    const file = new File(
+                        [], // Empty blob since we don't have the actual file content
+                        fileData.name,
+                        { type: fileData.type }
+                    );
+                    // Add the original properties
+                    Object.defineProperty(file, 'size', { value: fileData.size });
+                    Object.defineProperty(file, 'lastModified', { value: fileData.lastModified });
+                    // Add the thumbnail data
+                    if (fileData.thumbnail) {
+                        Object.defineProperty(file, 'dataURL', { value: fileData.thumbnail });
+                    }
+                    return file;
+                });
+                setFiles(existingFiles);
+            } else {
+                setFiles([]);
+            }
+            
             setCoverImage(null);
             setProcessingFiles(0);
             setShowConfirmDialog(false);
@@ -119,8 +142,21 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
             setIsSaving(true);
             const coverImageData = coverPreview || (await getFilePreview(coverImage!)) || '';
             
+            // Process files, preserving existing file data for files that haven't changed
             const processedFiles = await Promise.all(
                 files.map(async file => {
+                    // If this is an existing file (has a dataURL property), use its data
+                    if ('dataURL' in file) {
+                        return {
+                            name: file.name,
+                            type: file.type,
+                            size: file.size,
+                            lastModified: file.lastModified,
+                            thumbnail: (file as any).dataURL
+                        };
+                    }
+                    
+                    // Otherwise, process the new file
                     const fileData: FileData = {
                         name: file.name,
                         type: file.type,

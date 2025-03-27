@@ -37,9 +37,24 @@ const ImagePreview = ({ src, alt, onClose }: { src: string; alt: string; onClose
             }
         }}
     >
-        <DialogContent sx={{ p: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+        <DialogContent 
+            sx={{ 
+                p: 0, 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                position: 'relative',
+                minHeight: '100vh',
+                bgcolor: 'rgba(0, 0, 0, 0.5)',
+                cursor: 'pointer',
+            }}
+            onClick={onClose}
+        >
             <IconButton
-                onClick={onClose}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                }}
                 sx={{
                     position: 'absolute',
                     top: 8,
@@ -57,12 +72,16 @@ const ImagePreview = ({ src, alt, onClose }: { src: string; alt: string; onClose
                 component="img"
                 src={src}
                 alt={alt}
+                onClick={(e) => e.stopPropagation()}
                 sx={{
                     maxWidth: '90vw',
                     maxHeight: '90vh',
                     objectFit: 'contain',
                     borderRadius: 1,
                     boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                    border: '2px solid rgba(255, 255, 255, 0.2)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                    p: 1,
                 }}
             />
         </DialogContent>

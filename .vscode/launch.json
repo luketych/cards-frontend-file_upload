@@ -4,18 +4,19 @@
         {
             "type": "chrome",
             "request": "launch",
-            "name": "Launch Chrome against localhost",
-            "url": "http://localhost:5500/index.html",
-            "webRoot": "${workspaceFolder}",
-            "sourceMapPathOverrides": {
-                "/src/*": "${workspaceFolder}/src/*"
-            }
+            "name": "Open Old Version",
+            "file": "${workspaceFolder}/old_src/index.html",
+            "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
+            "runtimeArgs": ["--allow-file-access", "--disable-web-security"]
         },
         {
             "type": "chrome",
             "request": "launch",
-            "name": "Open index.html directly",
-            "file": "${workspaceFolder}/src/index.html"
+            "name": "Open React Version",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/react_version",
+            "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
+            "preLaunchTask": "Start React Dev Server"
         }
     ]
 }

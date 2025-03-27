@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Molecule Creator</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div class="app-container">
+        <button id="createMolecule" class="create-button">Create Molecule</button>
+        
+        <!-- Molecules Grid -->
+        <div id="moleculesGrid" class="molecules-grid">
+            <!-- Molecules will be displayed here -->
+        </div>
+
+        <!-- Create Molecule Modal -->
+        <div id="uploadModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Create Molecule</h2>
+                    <button class="close-button">&times;</button>
+                </div>
+
+                <div class="molecule-form">
+                    <div class="form-group">
+                        <label for="moleculeTitle">Molecule Title</label>
+                        <input type="text" id="moleculeTitle" placeholder="Enter title" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cover Image</label>
+                        <div class="cover-image-area">
+                            <input type="file" id="coverImageInput" accept="image/*" class="file-input">
+                            <label for="coverImageInput" class="cover-upload-label">
+                                Select Cover Image
+                            </label>
+                            <div id="coverPreview" class="cover-preview"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Content Files</label>
+                        <div class="upload-area">
+                            <input type="file" id="fileInput" multiple class="file-input">
+                            <label for="fileInput" class="upload-label">
+                                Drop files here or click to upload
+                            </label>
+                        </div>
+                        <div id="fileGrid" class="file-grid">
+                            <!-- Files will be displayed here -->
+                        </div>
+                    </div>
+
+                    <button id="saveMolecule" class="save-button">Create Molecule</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/storage-manager.js" type="module"></script>
+    <script src="js/main.js" type="module" defer></script>
+</body>
+</html>

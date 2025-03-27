@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -27,15 +27,37 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
     onSave,
     molecule,
 }) => {
-    const [title, setTitle] = useState(molecule?.title || '');
+    const [title, setTitle] = useState('');
     const [coverImage, setCoverImage] = useState<File | null>(null);
-    const [coverPreview, setCoverPreview] = useState<string>(molecule?.coverImage || '');
+    const [coverPreview, setCoverPreview] = useState('');
     const [files, setFiles] = useState<File[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [processingFiles, setProcessingFiles] = useState(0);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
+
+    // Reset state when modal is opened/closed or molecule changes
+    useEffect(() => {
+        if (open) {
+            // Set initial state based on molecule prop
+            setTitle(molecule?.title || '');
+            setCoverPreview(molecule?.coverImage || '');
+            setFiles([]);
+            setCoverImage(null);
+            setProcessingFiles(0);
+            setShowConfirmDialog(false);
+        } else {
+            // Reset all state when modal is closed
+            setTitle('');
+            setCoverImage(null);
+            setCoverPreview('');
+            setFiles([]);
+            setProcessingFiles(0);
+            setShowConfirmDialog(false);
+            setIsSaving(false);
+        }
+    }, [open, molecule]);
 
     const handleCoverImageChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -203,21 +225,23 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                                         }}
                                     />
                                 ) : (
-                                    <Typography>Click to select cover image</Typography>
+                                    <Typography>
+                                        Click to select a cover image
+                                    </Typography>
                                 )}
                             </Box>
                             <input
-                                ref={coverInputRef}
                                 type="file"
-                                accept="image/*"
+                                ref={coverInputRef}
                                 onChange={handleCoverImageChange}
+                                accept="image/*"
                                 style={{ display: 'none' }}
                             />
                         </Box>
 
-                        <Box>
+                        <Box sx={{ mb: 2 }}>
                             <Typography variant="subtitle1" gutterBottom>
-                                Content Files
+                                Files
                             </Typography>
                             <Box
                                 sx={{
@@ -235,45 +259,45 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                                 onDragOver={handleDragOver}
                             >
                                 <Typography>
-                                    Drop files here or click to upload
+                                    Drag and drop files here or click to select
                                 </Typography>
                             </Box>
                             <input
-                                ref={fileInputRef}
                                 type="file"
-                                multiple
+                                ref={fileInputRef}
                                 onChange={handleFilesChange}
+                                multiple
                                 style={{ display: 'none' }}
                             />
+                        </Box>
 
-                            {files.length > 0 && (
-                                <Grid container spacing={2} sx={{ mt: 2 }}>
+                        {files.length > 0 && (
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="subtitle1" gutterBottom>
+                                    Selected Files
+                                </Typography>
+                                <Grid container spacing={2}>
                                     {files.map((file, index) => (
                                         <Grid item xs={12} sm={6} md={4} key={index}>
                                             <FileItem
-                                                file={{
-                                                    name: file.name,
-                                                    type: file.type,
-                                                    size: file.size,
-                                                    lastModified: file.lastModified,
-                                                }}
+                                                file={file}
                                                 onRemove={() => handleRemoveFile(index)}
                                             />
                                         </Grid>
                                     ))}
                                 </Grid>
-                            )}
-                        </Box>
+                            </Box>
+                        )}
                     </Box>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClose}>Cancel</Button>
                     <Button
-                        variant="contained"
                         onClick={handleSave}
+                        variant="contained"
                         disabled={isSaving || processingFiles > 0}
                     >
-                        {isSaving ? 'Saving...' : processingFiles > 0 ? 'Processing Files...' : 'Save'}
+                        {isSaving ? 'Saving...' : 'Save'}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -285,11 +309,13 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                 <DialogTitle>Confirm Close</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        Files are still processing. Are you sure you want to close?
+                        You have unsaved changes. Are you sure you want to close?
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setShowConfirmDialog(false)}>Cancel</Button>
+                    <Button onClick={() => setShowConfirmDialog(false)}>
+                        Cancel
+                    </Button>
                     <Button onClick={handleConfirmClose} color="error">
                         Close
                     </Button>

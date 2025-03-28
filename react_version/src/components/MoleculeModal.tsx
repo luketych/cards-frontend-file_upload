@@ -388,37 +388,69 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
             margin-top: 5px;
         }
     </style>
+    <script>
+        // Function to safely create and append elements
+        function createFileList(files) {
+            const container = document.getElementById('file-list');
+            files.forEach(file => {
+                const li = document.createElement('li');
+                
+                if (file.url) {
+                    const a = document.createElement('a');
+                    a.href = file.url;
+                    a.className = 'file-name';
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    a.textContent = (file.type?.startsWith('image/') ? '🖼️ ' : '📄 ') + file.name;
+                    li.appendChild(a);
+
+                    const urlDiv = document.createElement('div');
+                    urlDiv.className = 'url';
+                    urlDiv.textContent = file.url;
+                    li.appendChild(urlDiv);
+                } else {
+                    const span = document.createElement('span');
+                    span.className = 'file-name';
+                    span.textContent = (file.type?.startsWith('image/') ? '🖼️ ' : '📄 ') + file.name;
+                    li.appendChild(span);
+                }
+
+                const info = document.createElement('div');
+                info.className = 'file-info';
+                info.innerHTML = \`Type: \${file.type}<br>Size: \${(file.size / 1024).toFixed(2)} KB<br>Last Modified: \${new Date(file.lastModified).toLocaleString()}\`;
+                li.appendChild(info);
+
+                if (file.error) {
+                    const error = document.createElement('div');
+                    error.className = 'error';
+                    error.textContent = 'Error: ' + file.error;
+                    li.appendChild(error);
+                }
+
+                container.appendChild(li);
+            });
+        }
+
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileData = ${JSON.stringify(files.map((file, index) => {
+                const uploadResponse = responses[index];
+                return {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    lastModified: file.lastModified,
+                    url: uploadResponse?.url,
+                    error: uploadResponse?.error
+                };
+            }))};
+            createFileList(fileData);
+        });
+    </script>
 </head>
 <body>
     <h1>${title}</h1>
-    <ul>
-        ${files.map((file, index) => {
-            const uploadResponse = responses[index];
-            const fileUrl = uploadResponse?.url;
-            const hasError = uploadResponse?.error;
-            
-            return `
-            <li>
-                ${fileUrl ? `
-                    <a href="${fileUrl}" class="file-name" target="_blank" rel="noopener noreferrer">
-                        ${file.type.startsWith('image/') ? '🖼️' : '📄'} ${file.name}
-                    </a>
-                    <div class="url">${fileUrl}</div>
-                ` : `
-                    <span class="file-name">
-                        ${file.type.startsWith('image/') ? '🖼️' : '📄'} ${file.name}
-                    </span>
-                `}
-                <div class="file-info">
-                    Type: ${file.type}<br>
-                    Size: ${(file.size / 1024).toFixed(2)} KB<br>
-                    Last Modified: ${new Date(file.lastModified).toLocaleString()}
-                </div>
-                ${hasError ? `<div class="error">Error: ${hasError}</div>` : ''}
-            </li>
-            `;
-        }).join('')}
-    </ul>
+    <ul id="file-list"></ul>
 </body>
 </html>`;
 

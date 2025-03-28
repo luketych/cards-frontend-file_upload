@@ -199,6 +199,34 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
                 <DialogTitle>File Index</DialogTitle>
                 <DialogContent>
                     <Box sx={{ mt: 2 }}>
+                        {molecule.uploadResponses?.find(response => response.name === 'index.html')?.url && (
+                            <Box 
+                                sx={{ 
+                                    mb: 3, 
+                                    p: 2, 
+                                    bgcolor: '#f5f5f5', 
+                                    borderRadius: 1,
+                                    wordBreak: 'break-all'
+                                }}
+                            >
+                                <Typography variant="subtitle2" gutterBottom color="primary">
+                                    Index URL:
+                                </Typography>
+                                <a 
+                                    href={molecule.uploadResponses.find(response => response.name === 'index.html')?.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    style={{ 
+                                        color: '#2196f3',
+                                        textDecoration: 'none',
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.9em'
+                                    }}
+                                >
+                                    {molecule.uploadResponses.find(response => response.name === 'index.html')?.url}
+                                </a>
+                            </Box>
+                        )}
                         <Typography variant="h6" gutterBottom>
                             {molecule.title} - Files
                         </Typography>

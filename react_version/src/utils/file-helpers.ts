@@ -32,12 +32,24 @@ export function getFilePreview(file: File): Promise<string | null> {
             return;
         }
 
+        console.log('Starting preview generation for:', file.name, 'type:', file.type, 'size:', file.size);
+
         const img = new Image();
         const reader = new FileReader();
 
+        img.onerror = (error) => {
+            console.error('Image loading error:', error);
+            reject(error);
+        };
+
         reader.onload = (e) => {
-            img.src = e.target?.result as string;
+            console.log('FileReader loaded data for:', file.name);
+            const dataUrl = e.target?.result as string;
+            console.log('DataURL starts with:', dataUrl.substring(0, 50) + '...');
+            
+            img.src = dataUrl;
             img.onload = () => {
+                console.log('Image loaded with dimensions:', img.width, 'x', img.height);
                 const canvas = document.createElement('canvas');
                 let width = img.width;
                 let height = img.height;
@@ -61,12 +73,32 @@ export function getFilePreview(file: File): Promise<string | null> {
                 canvas.height = height;
 
                 const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0, width, height);
+                if (!ctx) {
+                    console.error('Failed to get canvas context');
+                    reject(new Error('Failed to get canvas context'));
+                    return;
+                }
 
-                resolve(canvas.toDataURL('image/jpeg', 0.7));
+                // Set a background color to help identify if drawing fails
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, width, height);
+
+                try {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const resultDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    console.log('Successfully generated preview for:', file.name);
+                    console.log('Result DataURL starts with:', resultDataUrl.substring(0, 50) + '...');
+                    resolve(resultDataUrl);
+                } catch (error) {
+                    console.error('Error drawing image:', error);
+                    reject(error);
+                }
             };
         };
-        reader.onerror = reject;
+        reader.onerror = (error) => {
+            console.error('FileReader error:', error);
+            reject(error);
+        };
         reader.readAsDataURL(file);
     });
 } 

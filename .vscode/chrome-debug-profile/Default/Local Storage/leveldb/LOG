@@ -1,6 +1,3 @@
-2025/03/27-16:26:08.672 3d03 Reusing MANIFEST /Users/luketych/Dev/_projects/_cards/frontend/viscera/.vscode/chrome-debug-profile/Default/Local Storage/leveldb/MANIFEST-000001
-2025/03/27-16:26:08.675 3d03 Recovering log #3
-2025/03/27-16:26:08.675 3d03 Reusing old log /Users/luketych/Dev/_projects/_cards/frontend/viscera/.vscode/chrome-debug-profile/Default/Local Storage/leveldb/000003.log 
-2025/03/27-16:29:47.451 3903 Level-0 table #5: started
-2025/03/27-16:29:47.462 3903 Level-0 table #5: 11585 bytes OK
-2025/03/27-16:29:47.468 3903 Delete type=0 #3
+2025/03/27-16:59:20.613 3a03 Reusing MANIFEST /Users/luketych/Dev/_projects/_cards/frontend/viscera/.vscode/chrome-debug-profile/Default/Local Storage/leveldb/MANIFEST-000001
+2025/03/27-16:59:20.616 3a03 Recovering log #4
+2025/03/27-16:59:20.617 3a03 Reusing old log /Users/luketych/Dev/_projects/_cards/frontend/viscera/.vscode/chrome-debug-profile/Default/Local Storage/leveldb/000004.log 

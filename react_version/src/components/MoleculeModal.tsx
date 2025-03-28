@@ -47,7 +47,6 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
     const [previews, setPreviews] = useState<string[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadResponses, setUploadResponses] = useState<any[]>([]);
-    const [hasUnuploadedFiles, setHasUnuploadedFiles] = useState(false);
     const [showExitWarning, setShowExitWarning] = useState(false);
 
     // Reset state when modal is opened/closed or molecule changes
@@ -74,28 +73,15 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                 });
                 setSelectedCoverImageIndex(coverIndex);
 
-                // Log complete molecule data
-                console.log('Loaded Molecule Data:', {
-                    id: molecule.id,
-                    title: molecule.title,
-                    coverImage: molecule.coverImage,
-                    files: molecule.files.map(file => ({
-                        name: file.name,
-                        type: file.type,
-                        size: file.size,
-                        lastModified: file.lastModified,
-                        thumbnail: file.thumbnail ? 'data:image/...' : undefined
-                    })),
-                    uploadResponses: molecule.uploadResponses
-                });
+                setUploadResponses(molecule.uploadResponses || []);
             } else {
                 setFiles([]);
                 setSelectedCoverImageIndex(-1);
+                setUploadResponses([]);
             }
             
             setProcessingFiles(0);
             setShowConfirmDialog(false);
-            setUploadResponses(molecule?.uploadResponses || []);
         } else {
             setTitle('');
             setFiles([]);
@@ -117,20 +103,16 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
         loadPreviews();
     }, [files]);
 
-    useEffect(() => {
-        const hasUploaded = files.length > 0 && uploadResponses.length === files.length;
-        setHasUnuploadedFiles(!hasUploaded);
-    }, [files, uploadResponses]);
-
     const handleClose = useCallback(() => {
-        if (hasUnuploadedFiles) {
-            setShowExitWarning(true);
-        } else if (processingFiles > 0 || isSaving) {
+        if (processingFiles > 0 || isSaving || isUploading) {
             setShowConfirmDialog(true);
+        } else if (files.length > 0 && !molecule) {
+            // Only show exit warning for new molecules with files
+            setShowExitWarning(true);
         } else {
             onClose();
         }
-    }, [processingFiles, isSaving, onClose, hasUnuploadedFiles]);
+    }, [processingFiles, isSaving, isUploading, onClose, files.length, molecule]);
 
     const handleConfirmClose = useCallback(() => {
         setShowConfirmDialog(false);
@@ -242,7 +224,102 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                 coverImageData = `data:image/svg+xml;base64,${btoa(svg)}`;
             }
 
-            // Generate index.html
+            await onSave({
+                title,
+                coverImage: coverImageData,
+                files: processedFiles,
+                uploadResponses,
+                indexHtml: molecule?.indexHtml,
+            });
+
+            onClose();
+        } catch (error) {
+            console.error('Error saving molecule:', error);
+            alert('Error saving molecule. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    }, [title, files, selectedCoverImageIndex, processingFiles, onSave, onClose, uploadResponses, molecule?.indexHtml]);
+
+    const handleUpload = async () => {
+        if (!title.trim()) {
+            alert('Please enter a title for your molecule');
+            return;
+        }
+
+        if (files.length === 0) {
+            alert('Please add at least one file');
+            return;
+        }
+
+        setIsUploading(true);
+        const responses: Array<{ url?: string; error?: string; status?: string; file?: string }> = [];
+
+        try {
+            // Upload each file
+            for (const file of files) {
+                const formData = new FormData();
+                
+                try {
+                    // Check if file is empty
+                    if (file.size === 0) {
+                        console.error('File is empty:', file.name);
+                        responses.push({ 
+                            error: 'File is empty',
+                            status: 'error',
+                            file: file.name
+                        });
+                        continue;
+                    }
+
+                    // If this is a file that was previously loaded (has dataURL)
+                    const fileWithDataUrl = file as { dataURL?: string } & File;
+                    if (fileWithDataUrl.dataURL) {
+                        // Convert base64 back to blob
+                        const response = await fetch(fileWithDataUrl.dataURL);
+                        const blob = await response.blob();
+                        formData.append('files', blob, file.name);
+                    } else {
+                        formData.append('files', file, file.name);
+                    }
+
+                    const response = await fetch('http://localhost:1337/api/upload', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`
+                        },
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        let errorMessage;
+                        try {
+                            const errorJson = JSON.parse(errorText);
+                            errorMessage = errorJson.error?.message || errorJson.message || errorText;
+                        } catch {
+                            errorMessage = errorText;
+                        }
+                        throw new Error(`Upload failed (${response.status}): ${errorMessage}`);
+                    }
+
+                    const data = await response.json();
+                    responses.push(data[0]); // Strapi returns an array with one item
+                } catch (error) {
+                    console.error('Upload error:', {
+                        file: file.name,
+                        error: error instanceof Error ? error.message : error
+                    });
+
+                    responses.push({ 
+                        error: error instanceof Error ? error.message : 'Upload failed',
+                        status: 'error',
+                        file: file.name
+                    });
+                }
+            }
+
+            // Generate index.html after all uploads
             const indexHtml = `
 <!DOCTYPE html>
 <html lang="en">
@@ -275,186 +352,124 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
             padding: 15px;
             border-radius: 5px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        li:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .file-name {
             font-weight: 500;
             color: #2196f3;
             margin-bottom: 5px;
+            text-decoration: none;
+            display: block;
+        }
+        .file-name:hover {
+            text-decoration: underline;
         }
         .file-info {
             font-size: 0.9em;
             color: #666;
+        }
+        .url {
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.85em;
+            background: #f8f8f8;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: block;
+        }
+        .error {
+            color: #d32f2f;
+            font-size: 0.9em;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
     <h1>${title}</h1>
     <ul>
-        ${processedFiles.map(file => `
-        <li>
-            <div class="file-name">${file.name}</div>
-            <div class="file-info">
-                Type: ${file.type}<br>
-                Size: ${(file.size / 1024).toFixed(2)} KB<br>
-                Last Modified: ${new Date(file.lastModified).toLocaleString()}
-            </div>
-        </li>
-        `).join('')}
+        ${files.map((file, index) => {
+            const uploadResponse = responses[index];
+            const fileUrl = uploadResponse?.url;
+            const hasError = uploadResponse?.error;
+            
+            return `
+            <li>
+                ${fileUrl ? `
+                    <a href="${fileUrl}" class="file-name" target="_blank" rel="noopener noreferrer">
+                        ${file.type.startsWith('image/') ? '🖼️' : '📄'} ${file.name}
+                    </a>
+                    <div class="url">${fileUrl}</div>
+                ` : `
+                    <span class="file-name">
+                        ${file.type.startsWith('image/') ? '🖼️' : '📄'} ${file.name}
+                    </span>
+                `}
+                <div class="file-info">
+                    Type: ${file.type}<br>
+                    Size: ${(file.size / 1024).toFixed(2)} KB<br>
+                    Last Modified: ${new Date(file.lastModified).toLocaleString()}
+                </div>
+                ${hasError ? `<div class="error">Error: ${hasError}</div>` : ''}
+            </li>
+            `;
+        }).join('')}
     </ul>
 </body>
 </html>`;
 
+            // Get the cover image - either from selected image file or use default icon
+            let coverImageData = '';
+            if (selectedCoverImageIndex !== -1) {
+                const selectedFile = files[selectedCoverImageIndex];
+                const selectedFileData = selectedFile as { dataURL?: string } & File;
+                if (selectedFileData.dataURL) {
+                    coverImageData = selectedFileData.dataURL;
+                } else {
+                    // Create a data URL for a simple file icon
+                    const svg = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24">
+                            <path fill="#9e9e9e" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+                        </svg>
+                    `;
+                    coverImageData = `data:image/svg+xml;base64,${btoa(svg)}`;
+                }
+            } else {
+                // Create a data URL for a simple file icon
+                const svg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24">
+                        <path fill="#9e9e9e" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+                    </svg>
+                `;
+                coverImageData = `data:image/svg+xml;base64,${btoa(svg)}`;
+            }
+
+            // Save the molecule with upload responses and index.html
             await onSave({
                 title,
                 coverImage: coverImageData,
-                files: processedFiles,
-                uploadResponses,
+                files: files.map(file => ({
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    lastModified: file.lastModified,
+                    thumbnail: (file as any).dataURL
+                })),
+                uploadResponses: responses,
                 indexHtml,
             });
 
             onClose();
         } catch (error) {
-            console.error('Error saving molecule:', error);
-            alert('Error saving molecule. Please try again.');
+            console.error('Error during upload process:', error);
+            alert('Error uploading files. Please try again.');
         } finally {
-            setIsSaving(false);
+            setIsUploading(false);
         }
-    }, [title, files, selectedCoverImageIndex, processingFiles, onSave, onClose, uploadResponses]);
-
-    const handleUpload = async () => {
-        setIsUploading(true);
-        const responses = [];
-
-        for (const file of files) {
-            const formData = new FormData();
-            
-            try {
-                // Check if file is empty
-                if (file.size === 0) {
-                    console.error('File is empty:', file.name);
-                    responses.push({ 
-                        error: 'File is empty',
-                        status: 'error',
-                        file: file.name
-                    });
-                    continue;
-                }
-
-                // Log file details before upload
-                console.log('Uploading file:', {
-                    name: file.name,
-                    type: file.type,
-                    size: file.size,
-                    lastModified: file.lastModified
-                });
-
-                // If this is a file that was previously loaded (has dataURL)
-                const fileWithDataUrl = file as { dataURL?: string } & File;
-                if (fileWithDataUrl.dataURL) {
-                    // Convert base64 back to blob
-                    const response = await fetch(fileWithDataUrl.dataURL);
-                    const blob = await response.blob();
-                    formData.append('files', blob, file.name);
-                } else {
-                    formData.append('files', file, file.name);
-                }
-                
-                // Verify formData content
-                console.log('FormData entries:');
-                for (const pair of formData.entries()) {
-                    console.log(pair[0], pair[1]);
-                    const value = pair[1];
-                    if (value instanceof Blob) {
-                        console.log('File/Blob size in FormData:', value.size);
-                    }
-                }
-
-                const response = await fetch('http://localhost:1337/api/upload', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`
-                    },
-                });
-
-                // Log the full response details
-                console.log('Response status:', response.status);
-                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Upload error details:', {
-                        status: response.status,
-                        statusText: response.statusText,
-                        headers: Object.fromEntries(response.headers.entries()),
-                        errorText
-                    });
-
-                    let errorMessage;
-                    try {
-                        // Try to parse error as JSON
-                        const errorJson = JSON.parse(errorText);
-                        errorMessage = errorJson.error?.message || errorJson.message || errorText;
-                    } catch {
-                        // If not JSON, use text directly
-                        errorMessage = errorText;
-                    }
-
-                    throw new Error(`Upload failed (${response.status}): ${errorMessage}`);
-                }
-
-                const data = await response.json();
-                console.log('Upload success response:', data);
-                responses.push(data);
-            } catch (error) {
-                console.error('Upload error:', {
-                    file: file.name,
-                    error: error instanceof Error ? {
-                        message: error.message,
-                        stack: error.stack
-                    } : error
-                });
-
-                responses.push({ 
-                    error: error instanceof Error ? error.message : 'Upload failed',
-                    status: 'error',
-                    file: file.name
-                });
-            }
-        }
-
-        setUploadResponses(responses);
-        setIsUploading(false);
-
-        // Log final state
-        console.log('Final upload responses:', responses);
-
-        // Get the cover image from the selected file's thumbnail
-        const selectedFile = files[selectedCoverImageIndex];
-        const selectedFileData = selectedFile as { dataURL?: string } & File;
-        const coverImageData = selectedFileData.dataURL || '';
-
-        // Save the molecule with upload responses
-        const updatedMolecule: Omit<Molecule, 'id'> = {
-            title,
-            coverImage: coverImageData,
-            files: files.map(file => ({
-                name: file.name,
-                type: file.type,
-                size: file.size,
-                lastModified: file.lastModified,
-                thumbnail: (file as any).dataURL
-            })),
-            uploadResponses: responses,
-        };
-        await onSave(updatedMolecule);
-    };
-
-    const handleUploadAll = async () => {
-        if (!files.length) {
-            return;
-        }
-        await handleUpload();
     };
 
     const handleRemoveFile = useCallback((index: number) => {
@@ -588,14 +603,27 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                         </Button>
                     )}
                     <Button onClick={handleClose}>Cancel</Button>
-                    <Button
-                        onClick={handleSave}
-                        variant="contained"
-                        color="primary"
-                        disabled={isSaving || processingFiles > 0}
-                    >
-                        {isSaving ? <CircularProgress size={24} /> : 'Save'}
-                    </Button>
+                    {molecule ? (
+                        // Edit mode - show Save button
+                        <Button
+                            onClick={handleSave}
+                            variant="contained"
+                            color="primary"
+                            disabled={isSaving || processingFiles > 0}
+                        >
+                            {isSaving ? <CircularProgress size={24} /> : 'Save'}
+                        </Button>
+                    ) : (
+                        // Create mode - show Upload button
+                        <Button
+                            onClick={handleUpload}
+                            variant="contained"
+                            color="primary"
+                            disabled={isUploading || processingFiles > 0 || files.length === 0}
+                        >
+                            {isUploading ? <CircularProgress size={24} /> : 'Upload'}
+                        </Button>
+                    )}
                 </DialogActions>
             </Dialog>
 
@@ -623,18 +651,15 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                 open={showExitWarning}
                 onClose={() => setShowExitWarning(false)}
             >
-                <DialogTitle>Unuploaded Files</DialogTitle>
+                <DialogTitle>Unsaved Changes</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        You have files that haven't been uploaded yet. Are you sure you want to exit without uploading them?
+                        Are you sure you want to exit without saving your changes?
                     </Typography>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setShowExitWarning(false)}>
                         Cancel
-                    </Button>
-                    <Button onClick={handleUploadAll} color="primary" variant="contained">
-                        Upload All
                     </Button>
                     <Button 
                         onClick={() => {
@@ -643,7 +668,7 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                         }} 
                         color="error"
                     >
-                        Exit Without Uploading
+                        Exit Without Saving
                     </Button>
                 </DialogActions>
             </Dialog>

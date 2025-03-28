@@ -203,14 +203,50 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
                             {molecule.title} - Files
                         </Typography>
                         <List>
-                            {molecule.files.map((file, index) => (
-                                <ListItem key={index}>
-                                    <ListItemText
-                                        primary={file.name}
-                                        secondary={`Type: ${file.type} | Size: ${(file.size / 1024).toFixed(2)} KB`}
-                                    />
-                                </ListItem>
-                            ))}
+                            {molecule.files.map((file, index) => {
+                                const uploadResponse = molecule.uploadResponses?.[index];
+                                const fileUrl = uploadResponse?.url;
+                                const hasError = uploadResponse?.error;
+
+                                return (
+                                    <ListItem key={index}>
+                                        <ListItemText
+                                            primary={
+                                                fileUrl ? (
+                                                    <a 
+                                                        href={fileUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        style={{ 
+                                                            color: '#2196f3',
+                                                            textDecoration: 'none',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '8px'
+                                                        }}
+                                                    >
+                                                        {file.type.startsWith('image/') ? '🖼️' : '📄'} {file.name}
+                                                    </a>
+                                                ) : (
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        {file.type.startsWith('image/') ? '🖼️' : '📄'} {file.name}
+                                                    </span>
+                                                )
+                                            }
+                                            secondary={
+                                                <>
+                                                    Type: {file.type} | Size: {(file.size / 1024).toFixed(2)} KB
+                                                    {hasError && (
+                                                        <Typography color="error" component="div">
+                                                            Error: {hasError}
+                                                        </Typography>
+                                                    )}
+                                                </>
+                                            }
+                                        />
+                                    </ListItem>
+                                );
+                            })}
                         </List>
                     </Box>
                 </DialogContent>

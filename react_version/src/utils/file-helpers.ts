@@ -72,21 +72,23 @@ export function getFilePreview(file: File): Promise<string | null> {
                 canvas.width = width;
                 canvas.height = height;
 
-                const ctx = canvas.getContext('2d');
+                const ctx = canvas.getContext('2d', { alpha: true });
                 if (!ctx) {
                     console.error('Failed to get canvas context');
                     reject(new Error('Failed to get canvas context'));
                     return;
                 }
 
-                // Set a background color to help identify if drawing fails
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(0, 0, width, height);
+                // Clear the canvas (don't set a background color)
+                ctx.clearRect(0, 0, width, height);
 
                 try {
                     ctx.drawImage(img, 0, 0, width, height);
-                    const resultDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    console.log('Successfully generated preview for:', file.name);
+                    // Use the original image type, fallback to PNG for non-standard types
+                    const mimeType = file.type.startsWith('image/') ? file.type : 'image/png';
+                    const quality = mimeType === 'image/jpeg' ? 0.9 : undefined; // Only use quality for JPEG
+                    const resultDataUrl = canvas.toDataURL(mimeType, quality);
+                    console.log('Successfully generated preview for:', file.name, 'using format:', mimeType);
                     console.log('Result DataURL starts with:', resultDataUrl.substring(0, 50) + '...');
                     resolve(resultDataUrl);
                 } catch (error) {

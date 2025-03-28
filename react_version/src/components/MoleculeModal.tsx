@@ -422,6 +422,38 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
 </body>
 </html>`;
 
+            // Upload the index.html file
+            try {
+                const indexHtmlBlob = new Blob([indexHtml], { type: 'text/html' });
+                const formData = new FormData();
+                formData.append('files', indexHtmlBlob, 'index.html');
+
+                const indexUploadResponse = await fetch('http://localhost:1337/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`
+                    },
+                });
+
+                if (!indexUploadResponse.ok) {
+                    throw new Error(`Failed to upload index.html: ${indexUploadResponse.status}`);
+                }
+
+                const indexUploadData = await indexUploadResponse.json();
+                console.log('index.html upload response:', indexUploadData);
+                
+                // Add the index.html upload response to the responses array
+                responses.push(indexUploadData[0]);
+            } catch (error) {
+                console.error('Error uploading index.html:', error);
+                responses.push({
+                    error: error instanceof Error ? error.message : 'Failed to upload index.html',
+                    status: 'error',
+                    file: 'index.html'
+                });
+            }
+
             // Get the cover image - either from selected image file or use default icon
             let coverImageData = '';
             if (selectedCoverImageIndex !== -1) {

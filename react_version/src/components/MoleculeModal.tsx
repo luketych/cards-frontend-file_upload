@@ -48,6 +48,7 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const [uploadResponses, setUploadResponses] = useState<any[]>([]);
     const [showExitWarning, setShowExitWarning] = useState(false);
+    const [useRedundify, setUseRedundify] = useState(false);
 
     // Reset state when modal is opened/closed or molecule changes
     useEffect(() => {
@@ -280,14 +281,14 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                         const blob = await response.blob();
                         formData.append('files', blob, file.name);
                     } else {
-                        formData.append('files', file, file.name);
-                    }
+                            formData.append('files', file, file.name);
+                        }
 
-                    const response = await fetch('http://localhost:1337/api/upload', {
+                        const response = await fetch(`${useRedundify ? import.meta.env.VITE_API_REDUNDIFY_BASE_URL : import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_UPLOAD_PATH}`, {
                         method: 'POST',
                         body: formData,
                         headers: {
-                            'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`
+                            'Authorization': `Bearer ${import.meta.env.STRAPI_UPLOAD_TOKEN}`
                         },
                     });
 
@@ -460,11 +461,11 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                 const formData = new FormData();
                 formData.append('files', indexHtmlBlob, 'index.html');
 
-                const indexUploadResponse = await fetch('http://localhost:1337/api/upload', {
+                const indexUploadResponse = await fetch(`${useRedundify ? import.meta.env.VITE_API_REDUNDIFY_BASE_URL : import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_UPLOAD_PATH}`, {
                     method: 'POST',
                     body: formData,
                     headers: {
-                        'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`
+                        'Authorization': `Bearer ${import.meta.env.STRAPI_UPLOAD_TOKEN}`
                     },
                 });
 
@@ -659,14 +660,24 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
                 <DialogActions>
                     {onDelete && molecule && (
                         <Button
-                            color="error"
-                            onClick={() => onDelete(molecule.id)}
-                            sx={{ mr: 'auto' }}
+                    color="error"
+                    onClick={() => onDelete(molecule.id)}
+                    sx={{ mr: 'auto' }}
                         >
                             Delete
                         </Button>
                     )}
                     <Button onClick={handleClose}>Cancel</Button>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                        <input
+                            type="checkbox"
+                            id="redundify"
+                            checked={useRedundify}
+                            onChange={(e) => setUseRedundify(e.target.checked)}
+                            style={{ marginRight: '8px' }}
+                        />
+                        <label htmlFor="redundify">redundify</label>
+                    </Box>
                     {molecule ? (
                         // Edit mode - show Save button
                         <Button
@@ -738,4 +749,4 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
             </Dialog>
         </>
     );
-}; 
+};

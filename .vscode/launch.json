@@ -5,7 +5,7 @@
             "type": "chrome",
             "request": "launch",
             "name": "Launch Chrome against localhost",
-            "url": "http://localhost:3000",
+            "url": "http://localhost:3001",
             "webRoot": "${workspaceFolder}/react_version",
             "sourceMapPathOverrides": {
                 "webpack:///src/*": "${webRoot}/src/*"

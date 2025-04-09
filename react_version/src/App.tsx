@@ -143,11 +143,11 @@ function App() {
                             }
                         }
 
-                        const response = await fetch('http://localhost:1337/api/upload', {
+                        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_UPLOAD_PATH}`, {
                             method: 'POST',
                             body: formData,
                             headers: {
-                                'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`
+                                'Authorization': `Bearer ${import.meta.env.STRAPI_UPLOAD_TOKEN}`
                             },
                         });
 

@@ -7,12 +7,10 @@
             "name": "Debug React App",
             "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}/react_version",
-            "sourceMaps": true,
             "sourceMapPathOverrides": {
-                "/@fs/*": "${webRoot}/*",
-                "/@vite/*": "${webRoot}/node_modules/*"
-            },
-            "preLaunchTask": "npm: dev"
+                "webpack:///src/*": "${webRoot}/src/*",
+                "vite:///src/*": "${webRoot}/src/*"
+            }
         },
         {
             "type": "node",

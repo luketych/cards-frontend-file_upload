@@ -58,14 +58,14 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
         const hasErrors = molecule.uploadResponses.some(response => response.error);
         const isUploading = molecule.uploadResponses.some(response => response.status === 'uploading');
         
-        console.log('Upload status:', {
-            moleculeId: molecule.id,
-            title: molecule.title,
-            hasErrors,
-            isUploading,
-            responsesCount: molecule.uploadResponses.length,
-            responses: molecule.uploadResponses
-        });
+        // console.log('Upload status:', {
+        //     moleculeId: molecule.id,
+        //     title: molecule.title,
+        //     hasErrors,
+        //     isUploading,
+        //     responsesCount: molecule.uploadResponses.length,
+        //     responses: molecule.uploadResponses
+        // });
         
         if (isUploading) {
             return <CloudUploadIcon color="primary" />;
@@ -199,7 +199,7 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
                 <DialogTitle>File Index</DialogTitle>
                 <DialogContent>
                     <Box sx={{ mt: 2 }}>
-                        {molecule.uploadResponses?.find(response => response.name === 'index.html')?.url && (
+                        {molecule.uploadResponses?.find(response => response.file === 'index.html')?.url && (
                             <Box 
                                 sx={{ 
                                     mb: 3, 
@@ -213,7 +213,7 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
                                     Index URL:
                                 </Typography>
                                 <a 
-                                    href={molecule.uploadResponses.find(response => response.name === 'index.html')?.url} 
+                                    href={molecule.uploadResponses.find(response => response.file === 'index.html')?.url} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
                                     style={{ 
@@ -223,7 +223,7 @@ export const MoleculeCard: React.FC<MoleculeCardProps> = ({
                                         fontSize: '0.9em'
                                     }}
                                 >
-                                    {molecule.uploadResponses.find(response => response.name === 'index.html')?.url}
+                                    {molecule.uploadResponses.find(response => response.file === 'index.html')?.url}
                                 </a>
                             </Box>
                         )}

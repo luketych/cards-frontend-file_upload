@@ -223,31 +223,307 @@ export const MoleculeModal: React.FC<MoleculeModalProps> = ({
     }, [title, files, selectedCoverImageIndex, processingFiles, onSave, onClose, molecule?.indexHtml]);
 
     const handleUpload = async () => {
-        if (files.length === 0) return;
-        
+        if (!title.trim()) {
+            alert('Please enter a title for your molecule');
+            return;
+        }
+
+        if (files.length === 0) {
+            alert('Please add at least one file');
+            return;
+        }
+
+        setIsSaving(true);
+        const responses: Array<{ url?: string; error?: string; status?: string; file?: string }> = [];
+
         try {
-            setIsSaving(true);
-            const processedFiles = files.map(file => ({
-                name: file.name,
-                type: file.type,
-                size: file.size,
-                lastModified: file.lastModified,
-                thumbnail: (file as any).dataURL
-            }));
+            // Upload each file
+            for (const file of files) {
+                const formData = new FormData();
+                
+                try {
+                    // Check if file is empty
+                    if (file.size === 0) {
+                        console.error('File is empty:', file.name);
+                        responses.push({ 
+                            error: 'File is empty',
+                            status: 'error',
+                            file: file.name
+                        });
+                        continue;
+                    }
 
-            const coverImageData = selectedCoverImageIndex !== -1 
-                ? (files[selectedCoverImageIndex] as any).dataURL 
-                : undefined;
+                    // If this is a file that was previously loaded (has dataURL)
+                    const fileWithDataUrl = file as { dataURL?: string } & File;
+                    if (fileWithDataUrl.dataURL) {
+                        // Convert base64 back to blob
+                        const response = await fetch(fileWithDataUrl.dataURL);
+                        const blob = await response.blob();
+                        formData.append('files', blob, file.name);
+                    } else {
+                        formData.append('files', file, file.name);
+                    }
 
+                    let fetchURL = `${useRedundify ? import.meta.env.VITE_API_REDUNDIFY_BASE_URL : import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_UPLOAD_PATH}`
+                    console.log(import.meta.env)
+                    
+                    console.log('Fetch URL:', fetchURL);
+                    console.log('Authorization:', `Bearer ${import.meta.env.VITE_STRAPI_UPLOAD_TOKEN}`);
+
+                    const response = await fetch(
+                        `${import.meta.env.VITE_API_BASE_URL}/api/upload`,
+                        {
+                            method: "POST",
+                            headers: {
+                                Authorization: `Bearer ${import.meta.env.VITE_STRAPI_UPLOAD_TOKEN}`,
+                            },
+                            body: formData,
+                        }
+                    );
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        let errorMessage;
+                        try {
+                            const errorJson = JSON.parse(errorText);
+                            errorMessage = errorJson.error?.message || errorJson.message || errorText;
+                        } catch {
+                            errorMessage = errorText;
+                        }
+                        throw new Error(`Upload failed (${response.status}): ${errorMessage}`);
+                    }
+
+                    const data = await response.json();
+
+                    console.log('Upload response:', data);
+
+                    responses.push(data[0]); // Strapi returns an array with one item
+                } catch (error) {
+                    console.error('Upload error:', {
+                        file: file.name,
+                        error: error instanceof Error ? error.message : error
+                    });
+
+                    responses.push({ 
+                        error: error instanceof Error ? error.message : 'Upload failed',
+                        status: 'error',
+                        file: file.name
+                    });
+                }
+            }
+
+            // Generate index.html after all uploads
+            const indexHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title} - File Index</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: white;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        li:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .file-name {
+            font-weight: 500;
+            color: #2196f3;
+            margin-bottom: 5px;
+            text-decoration: none;
+            display: block;
+        }
+        .file-name:hover {
+            text-decoration: underline;
+        }
+        .file-info {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .url {
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.85em;
+            background: #f8f8f8;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: block;
+        }
+        .error {
+            color: #d32f2f;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    </style>
+    <script>
+        // Function to safely create and append elements
+        function createFileList(files) {
+            const container = document.getElementById('file-list');
+            files.forEach(file => {
+                const li = document.createElement('li');
+                
+                if (file.url) {
+                    const a = document.createElement('a');
+                    a.href = file.url;
+                    a.className = 'file-name';
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    a.textContent = (file.type?.startsWith('image/') ? '🖼️ ' : '📄 ') + file.name;
+                    li.appendChild(a);
+
+                    const urlDiv = document.createElement('div');
+                    urlDiv.className = 'url';
+                    urlDiv.textContent = file.url;
+                    li.appendChild(urlDiv);
+                } else {
+                    const span = document.createElement('span');
+                    span.className = 'file-name';
+                    span.textContent = (file.type?.startsWith('image/') ? '🖼️ ' : '📄 ') + file.name;
+                    li.appendChild(span);
+                }
+
+                const info = document.createElement('div');
+                info.className = 'file-info';
+                info.innerHTML = \`Type: \${file.type}<br>Size: \${(file.size / 1024).toFixed(2)} KB<br>Last Modified: \${new Date(file.lastModified).toLocaleString()}\`;
+                li.appendChild(info);
+
+                if (file.error) {
+                    const error = document.createElement('div');
+                    error.className = 'error';
+                    error.textContent = 'Error: ' + file.error;
+                    li.appendChild(error);
+                }
+
+                container.appendChild(li);
+            });
+        }
+
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileData = ${JSON.stringify(files.map((file, index) => {
+                const uploadResponse = responses[index];
+                return {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    lastModified: file.lastModified,
+                    url: uploadResponse?.url,
+                    error: uploadResponse?.error
+                };
+            }))};
+            createFileList(fileData);
+        });
+    </script>
+</head>
+<body>
+    <h1>${title}</h1>
+    <ul id="file-list"></ul>
+</body>
+</html>`;
+
+            // Upload the index.html file
+            try {
+                const indexHtmlBlob = new Blob([indexHtml], { type: 'text/html' });
+                const formData = new FormData();
+                formData.append('files', indexHtmlBlob, 'index.html');
+
+                const indexUploadResponse = await fetch(`${useRedundify ? import.meta.env.VITE_API_REDUNDIFY_BASE_URL : import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_UPLOAD_PATH}`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Authorization': `Bearer ${import.meta.env.VITE_STRAPI_UPLOAD_TOKEN}`
+                    },
+                });
+
+                if (!indexUploadResponse.ok) {
+                    throw new Error(`Failed to upload index.html: ${indexUploadResponse.status}`);
+                }
+
+                const indexUploadData = await indexUploadResponse.json();
+                console.log('index.html upload response:', indexUploadData);
+                
+                // Add the index.html upload response to the responses array
+                responses.push(indexUploadData[0]);
+            } catch (error) {
+                console.error('Error uploading index.html:', error);
+                responses.push({
+                    error: error instanceof Error ? error.message : 'Failed to upload index.html',
+                    status: 'error',
+                    file: 'index.html'
+                });
+            }
+
+            // Get the cover image - either from selected image file or use default icon
+            let coverImageData = '';
+            if (selectedCoverImageIndex !== -1) {
+                const selectedFile = files[selectedCoverImageIndex];
+                const selectedFileData = selectedFile as { dataURL?: string } & File;
+                if (selectedFileData.dataURL) {
+                    coverImageData = selectedFileData.dataURL;
+                } else {
+                    // Create a data URL for a simple file icon
+                    const svg = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24">
+                            <path fill="#9e9e9e" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+                        </svg>
+                    `;
+                    coverImageData = `data:image/svg+xml;base64,${btoa(svg)}`;
+                }
+            } else {
+                // Create a data URL for a simple file icon
+                const svg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24">
+                        <path fill="#9e9e9e" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+                    </svg>
+                `;
+                coverImageData = `data:image/svg+xml;base64,${btoa(svg)}`;
+            }
+
+            // Save the molecule with upload responses and index.html
             await onSave({
                 title,
                 coverImage: coverImageData,
-                files: processedFiles,
-                indexHtml: molecule?.indexHtml,
+                files: files.map(file => ({
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    lastModified: file.lastModified,
+                    thumbnail: (file as any).dataURL
+                })),
+                uploadResponses: responses,
+                indexHtml,
             });
+
             onClose();
         } catch (error) {
-            console.error('Error uploading files:', error);
+            console.error('Error during upload process:', error);
+            alert('Error uploading files. Please try again.');
         } finally {
             setIsSaving(false);
         }

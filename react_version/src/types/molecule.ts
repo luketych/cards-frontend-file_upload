@@ -5,7 +5,7 @@ export interface Molecule {
     title: string;
     coverImage?: string;
     files: FileData[];
-    uploadResponses?: any[];
+    uploadResponses?: Array<{ url?: string; error?: string; status?: string; file?: string }>;
     indexHtml?: string;
     isLoading?: boolean;
 } 

@@ -42,6 +42,18 @@ class StorageManager {
             maxSize: estimate.quota || 0,
         };
     }
+
+    async migrateFromLocalStorage(): Promise<void> {
+        if (!this.db) await this.init();
+        const localStorageData = localStorage.getItem('molecules');
+        if (localStorageData) {
+            const molecules: Molecule[] = JSON.parse(localStorageData);
+            for (const molecule of molecules) {
+                await this.saveMolecule(molecule);
+            }
+            localStorage.removeItem('molecules');
+        }
+    }
 }
 
 export const storageManager = new StorageManager(); 

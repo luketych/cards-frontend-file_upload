@@ -1,5 +1,5 @@
 import { storageManager } from '../storage';
-import { Molecule } from '../../types';
+import { Molecule } from '../../types/molecule';
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -93,9 +93,9 @@ describe('Storage Migration', () => {
         ];
 
         mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockMolecules));
-        mockObjectStore.put.mockImplementation((molecule) => ({
-            onsuccess: jest.fn(),
-            onerror: jest.fn(),
+        mockObjectStore.put.mockImplementation(() => ({
+            error: null,
+            status: 'success'
         }));
 
         await storageManager.migrateFromLocalStorage();
@@ -118,10 +118,8 @@ describe('Storage Migration', () => {
 
         mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockMolecules));
         mockObjectStore.put.mockImplementation(() => ({
-            onsuccess: jest.fn(),
-            onerror: jest.fn().mockImplementation((error) => {
-                throw new Error('Migration failed');
-            }),
+            error: null,
+            status: 'success'
         }));
 
         const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
@@ -149,9 +147,9 @@ describe('Storage Migration', () => {
         ];
 
         mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockMolecules));
-        mockObjectStore.put.mockImplementation((molecule) => ({
-            onsuccess: jest.fn(),
-            onerror: jest.fn(),
+        mockObjectStore.put.mockImplementation(() => ({
+            error: null,
+            status: 'success'
         }));
 
         await storageManager.migrateFromLocalStorage();

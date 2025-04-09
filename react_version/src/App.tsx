@@ -1,14 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Container,
-    Grid,
-    Typography,
     Button,
     Box,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
+    Grid,
+    Typography,
     CircularProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -17,12 +13,6 @@ import { MoleculeCard } from './components/MoleculeCard';
 import { MoleculeModal } from './components/MoleculeModal';
 import { storageManager } from './utils/storage';
 import { Molecule } from './types/molecule';
-import { FileData } from './types/file';
-
-// Extend FileData to include dataURL
-interface FileWithDataURL extends FileData {
-    dataURL: string;
-}
 
 function App() {
     const [molecules, setMolecules] = useState<Molecule[]>([]);
@@ -143,7 +133,14 @@ function App() {
                             }
                         }
 
-                        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_UPLOAD_PATH}`, {
+                        console.log(import.meta.env)
+
+                        let fetchURL = `${import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_UPLOAD_PATH}`
+
+                        console.log('Fetch URL:', fetchURL);
+                        console.log('Authorization:', `Bearer ${import.meta.env.STRAPI_UPLOAD_TOKEN}`);
+
+                        const response = await fetch(fetchURL, {
                             method: 'POST',
                             body: formData,
                             headers: {

@@ -7,4 +7,5 @@ export interface Molecule {
     files: FileData[];
     uploadResponses?: any[];
     indexHtml?: string;
+    isLoading?: boolean;
 } 

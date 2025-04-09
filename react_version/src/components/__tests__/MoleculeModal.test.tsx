@@ -1,9 +1,8 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material';
 import { MoleculeModal } from '../MoleculeModal';
 import { getFilePreview } from '../../utils/file-helpers';
-import { Molecule } from '../../types';
+import { Molecule } from '../../types/molecule';
 
 // Mock the file-helpers module
 jest.mock('../../utils/file-helpers', () => ({

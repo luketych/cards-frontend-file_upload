@@ -13,6 +13,9 @@ import { MoleculeCard } from './components/MoleculeCard';
 import { MoleculeModal } from './components/MoleculeModal';
 import { storageManager } from './utils/storage';
 import { Molecule } from './types/molecule';
+import FlushLogsButton from './components/FlushLogsButton';
+
+import logger from '@/utils/logger';
 
 function App() {
     const [molecules, setMolecules] = useState<Molecule[]>([]);
@@ -25,8 +28,14 @@ function App() {
     }, []);
 
     const loadMolecules = async () => {
-        const loadedMolecules = await storageManager.getMolecules();
-        setMolecules(loadedMolecules);
+        try {
+            logger.info('Loading molecules from storage');
+            const loadedMolecules = await storageManager.getMolecules();
+            logger.info(`Molecules loaded successfully. Count: ${loadedMolecules.length}`);
+            setMolecules(loadedMolecules);
+        } catch (error) {
+            logger.error(`Failed to load molecules: ${error}`);
+        }
     };
 
     const handleOpenModal = (molecule?: Molecule) => {
@@ -249,6 +258,7 @@ function App() {
                     >
                         New Molecule
                     </Button>
+                    <FlushLogsButton onFlushComplete={() => logger.info('Logs flushed successfully')} />
                 </Box>
             </Box>
 

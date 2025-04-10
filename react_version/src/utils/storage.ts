@@ -1,10 +1,60 @@
-import { openDB } from 'idb';
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { Molecule } from '../types/molecule';
+
+interface LogEntry {
+    id?: number;
+    timestamp: number;
+    level: string;
+    message: string;
+    data?: any;
+}
+
+interface MyDB extends DBSchema {
+    logs: {
+        key: number;
+        value: LogEntry;
+        indexes: { 'by-timestamp': number };
+    };
+}
+
+let db: IDBPDatabase<MyDB> | null = null;
+
+export const initDB = async () => {
+    if (!db) {
+        db = await openDB<MyDB>('logs-db', 1, {
+            upgrade(db) {
+                const store = db.createObjectStore('logs', {
+                    keyPath: 'id',
+                    autoIncrement: true,
+                });
+                store.createIndex('by-timestamp', 'timestamp');
+            },
+        });
+    }
+    return db;
+};
+
+export const addLog = async (log: Omit<LogEntry, 'id'>) => {
+    const db = await initDB();
+    return db.add('logs', {
+        ...log,
+        timestamp: Date.now(),
+    });
+};
+
+export const getLogs = async (limit = 1000) => {
+    const db = await initDB();
+    return db.getAllFromIndex('logs', 'by-timestamp', undefined, limit);
+};
+
+export const clearLogs = async () => {
+    const db = await initDB();
+    return db.clear('logs');
+};
 
 class StorageManager {
     private dbName = 'moleculeDB';
     private storeName = 'molecules';
-    private db: any;
 
     async init() {
         this.db = await openDB(this.dbName, 1, {

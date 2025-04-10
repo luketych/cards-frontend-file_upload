@@ -1,2 +1,3 @@
-2025/03/29-13:05:42.636 a503 Creating DB /Users/luketych/Dev/_projects/_cards/frontends/main-frontend/viscera/.vscode/chrome-debug-profile/Default/IndexedDB/http_localhost_3001.indexeddb.leveldb since it was missing.
-2025/03/29-13:05:42.641 a503 Reusing MANIFEST /Users/luketych/Dev/_projects/_cards/frontends/main-frontend/viscera/.vscode/chrome-debug-profile/Default/IndexedDB/http_localhost_3001.indexeddb.leveldb/MANIFEST-000001
+2025/04/09-19:08:56.309 98a4d9 Reusing MANIFEST /Users/luketych/Dev/_projects/_cards/frontends/main-frontend/viscera/.vscode/chrome-debug-profile/Default/IndexedDB/http_localhost_3001.indexeddb.leveldb/MANIFEST-000001
+2025/04/09-19:08:56.310 98a4d9 Recovering log #3
+2025/04/09-19:08:56.310 98a4d9 Reusing old log /Users/luketych/Dev/_projects/_cards/frontends/main-frontend/viscera/.vscode/chrome-debug-profile/Default/IndexedDB/http_localhost_3001.indexeddb.leveldb/000003.log 

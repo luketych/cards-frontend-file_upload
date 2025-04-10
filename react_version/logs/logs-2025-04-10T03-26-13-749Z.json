@@ -1,0 +1,95 @@
+[
+  {
+    "level": "info",
+    "message": "Loading molecules from storage",
+    "data": [],
+    "timestamp": 1744255450894,
+    "id": 1
+  },
+  {
+    "level": "info",
+    "message": "Loading molecules from storage",
+    "data": [],
+    "timestamp": 1744255450901,
+    "id": 2
+  },
+  {
+    "level": "info",
+    "message": "Molecules loaded successfully. Count: 5",
+    "data": [],
+    "timestamp": 1744255450930,
+    "id": 3
+  },
+  {
+    "level": "info",
+    "message": "Molecules loaded successfully. Count: 5",
+    "data": [],
+    "timestamp": 1744255450977,
+    "id": 4
+  },
+  {
+    "level": "error",
+    "message": "Failed to flush logs:",
+    "data": [
+      {}
+    ],
+    "timestamp": 1744255452402,
+    "id": 5
+  },
+  {
+    "level": "info",
+    "message": "Loading molecules from storage",
+    "data": [],
+    "timestamp": 1744255532006,
+    "id": 6
+  },
+  {
+    "level": "info",
+    "message": "Loading molecules from storage",
+    "data": [],
+    "timestamp": 1744255532007,
+    "id": 7
+  },
+  {
+    "level": "info",
+    "message": "Molecules loaded successfully. Count: 5",
+    "data": [],
+    "timestamp": 1744255532017,
+    "id": 8
+  },
+  {
+    "level": "info",
+    "message": "Molecules loaded successfully. Count: 5",
+    "data": [],
+    "timestamp": 1744255532057,
+    "id": 9
+  },
+  {
+    "level": "info",
+    "message": "Loading molecules from storage",
+    "data": [],
+    "timestamp": 1744255572476,
+    "id": 10
+  },
+  {
+    "level": "info",
+    "message": "Loading molecules from storage",
+    "data": [],
+    "timestamp": 1744255572478,
+    "id": 11
+  },
+  {
+    "level": "info",
+    "message": "Molecules loaded successfully. Count: 5",
+    "data": [],
+    "timestamp": 1744255572500,
+    "id": 12
+  },
+  {
+    "level": "info",
+    "message": "Molecules loaded successfully. Count: 5",
+    "data": [],
+    "timestamp": 1744255572540,
+    "id": 13
+  }
+]

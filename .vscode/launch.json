@@ -5,7 +5,7 @@
             "type": "chrome",
             "request": "launch",
             "name": "Launch Chrome against localhost",
-            "url": "http://localhost:3001",
+            "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}/react_version",
             "sourceMapPathOverrides": {
                 "webpack:///src/*": "${webRoot}/src/*"
@@ -17,7 +17,12 @@
                 "--no-default-browser-check",
                 "--user-data-dir=${workspaceFolder}/.vscode/chrome-debug-profile"
             ],
-            "preLaunchTask": "npm: dev"
+            "preLaunchTask": "npm: dev",
+            "serverReadyAction": {
+                "pattern": "Local:.+(https?://.+)",
+                "uriFormat": "%s",
+                "action": "debugWithChrome"
+            }
         },
         {
             "type": "node",
@@ -26,7 +31,8 @@
             "runtimeExecutable": "npm",
             "runtimeArgs": ["run", "dev"],
             "cwd": "${workspaceFolder}/react_version",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
         }
     ]
 }
